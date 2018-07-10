@@ -6,6 +6,7 @@ var bucketName = "com.entmike.miketest2";
 var faceCollection = "mike";
 
 const AWS = require("aws-sdk");
+AWS.config.loadFromPath('./aws-config.json'); 
 AWS.config.update({
   region: "us-west-2",
   credentials : new AWS.SharedIniFileCredentials({profile: 'personal-account'})
