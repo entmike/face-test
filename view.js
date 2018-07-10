@@ -1,0 +1,156 @@
+const AWS = require("aws-sdk");
+const http = require("http");
+const zlib = require("zlib");
+const sharp = require('sharp');
+const BufferStream = require("stream");
+
+const port = 4321;
+var requestCache = {};
+var bucketName = "com.entmike.miketest2";
+AWS.config.update({
+  region: "us-west-2",
+  credentials : new AWS.SharedIniFileCredentials({profile: 'personal-account'})
+});
+const s3 = new AWS.S3({
+	apiVersion: '2006-03-01'
+});
+const dynamodb = new AWS.DynamoDB({
+	apiVersion: '2012-08-10'
+});
+const docClient = new AWS.DynamoDB.DocumentClient();
+var zipContent = function(request, response, cache){
+	
+}
+var serveContent = function(request, response, cache){
+	console.log(cache);
+	var acceptEncoding = request.headers['accept-encoding'] || "";
+	if (!cache.data.s3Object) {
+		response.end("File '" + request.url + "' not found.");
+		return;
+	}
+	var data = cache.data.s3Object;
+	if (acceptEncoding.match(/\bgzip\b/)) {
+		response.writeHead(200, { 
+			'Content-encoding': 'gzip',
+			'Content-type' : 'image/jpeg'
+		});
+		if(!cache.data.gzip){
+			var image = cache.data.processed;
+			zlib.gzip(image, function(err,data){
+				console.log("Adding gzip data to cache.");
+				cache.data.gzip = data;
+				response.end(data);
+			});	
+		}else{
+			response.end(cache.data.gzip);
+		}			
+	} else {
+		response.writeHead(200, {});
+		response.end(data.Body);
+	}
+}
+const server = http.createServer((request,response)=>{
+	var bucketKey = request.url.replace(/^\/+/g, '');
+	requestCache[bucketKey] = requestCache[bucketKey] || {};
+	var cache = requestCache[bucketKey];
+	if(!cache.data){
+		console.log("Processing uncached request: '" + request.url + "'...");
+		Promise.all([
+			s3.getObject({ Bucket : bucketName, Key : bucketKey })
+				.promise()
+				.catch((err)=>{
+					return {};
+				}),
+			docClient.query({
+				TableName: "imageInfo",
+				ProjectionExpression:"faceDetails",
+				KeyConditionExpression: "#bucket = :bucket and image = :image",
+				ExpressionAttributeNames:{
+					"#bucket": "bucket"
+				},
+				ExpressionAttributeValues: {
+					":bucket" : bucketName,
+					":image" : bucketKey
+				}
+			}).promise()
+		]).then((promiseData)=>{
+			if(promiseData[0].Body && promiseData[1].Items){
+				cache.data = {
+					s3Object : promiseData[0],
+					dynamoObject : promiseData[1].Items[0]
+				}
+				var file = new Buffer(promiseData[0].Body);
+				var originalImage = sharp(file);
+				var faces = [];
+				originalImage.metadata().then((metadata)=>{
+					for(face of cache.data.dynamoObject.faceDetails){
+						var box = face.BoundingBox;
+						console.log(metadata);
+						var coords = {
+							left : parseInt(box.Left * metadata.width),
+							top : parseInt(box.Top * metadata.height),
+							width : parseInt(box.Width * metadata.width),
+							height : parseInt(box.Height * metadata.height),
+						};
+						// Bounding box width/height can go beyond image dimensions in cases where face is on edge.
+						if(coords.left + coords.width > metadata.width) coords.width = metadata.width - coords.left;
+						if(coords.top + coords.height > metadata.height) coords.height = metadata.height - coords.top;
+						faces.push({coords : coords });
+					}
+					return(faces)
+				}).then(data=>{
+					for(face of data){
+						console.log("Extracting " + JSON.stringify(face.coords));
+						face.img = originalImage.clone().extract(face.coords);
+					}
+				}).then(()=>{
+					originalImage
+						.grayscale()
+						.blur(20);
+					var promises = [];
+					for(var face of faces){
+						promises.push(face.img.toBuffer());
+					}
+					Promise.all(promises).then(buffers=>{
+						for(var i=0;i<buffers.length;i++){
+							faces[i].buffer = buffers[i];
+						}
+						var workaround = faces.reduce(function(input,overlay){
+							return input.then( function(data) {
+								return sharp(data).overlayWith(overlay.buffer, { 
+									left : overlay.coords.left, 
+									top : overlay.coords.top
+								}).toBuffer();
+							});
+						}, originalImage.toBuffer());
+						workaround.then(data=>{
+							// sharp(data).toFile("final.jpg");
+							cache.data.processed = data;
+							serveContent(request, response, cache);
+						});
+					});
+				})/*
+				sharp(file)
+					.blur(20)
+					.toBuffer()
+					.then(data=>{
+						cache.data.manip = data
+					}).then(()=>{
+						serveContent(request, response, cache);
+					});*/
+			}else{
+				response.writeHead(404, { });
+				response.end("404");
+			}
+		});
+	}else{
+		serveContent(request, response, cache);
+	}
+	
+})
+server.listen(4321, (err)=>{
+	if(err){
+		return console.log("Error occured.\n\n", err);
+	}
+	console.log(`Server is listening on ${port}`);
+});
