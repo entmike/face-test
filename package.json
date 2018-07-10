@@ -1,0 +1,23 @@
+{
+  "name": "face-test",
+  "version": "1.0.0",
+  "description": "Face Test stuff",
+  "main": "test.js",
+  "dependencies": {
+    "aws-sdk": "^2.271.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "node test ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/entmike/face-test.git"
+  },
+  "author": "Mike Howles",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/entmike/face-test/issues"
+  },
+  "homepage": "https://github.com/entmike/face-test#readme"
+}
