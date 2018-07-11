@@ -2,25 +2,32 @@
 
 # Usage
 ```javascript
-const FaceServer = require("entmike-facetest");
-const AWS = require("aws-sdk");
+const FaceServer = require("entmike-facetest"),
+AWS = require("aws-sdk"),
+AWS2 = require("aws-sdk");
 
 AWS.config.update({
-  region: "us-west-2",
-  credentials : new AWS.SharedIniFileCredentials({profile: 'personal-account'})
+	region: "us-west-2"
+});
+
+AWS2.config.update({
+	region: "us-west-2",
+	credentials : new AWS.SharedIniFileCredentials({profile: 'personal-account'})
 });
 
 FaceServer.listen({
-	AWS: AWS,
 	servers : {
+	// Example HTTP server.  AWS account and S3 bucket name needed.
 	4321 : {
 		AWS : AWS,
 		bucket : "com.entmike.miketest1"
 	},
+	// Example running a second AWS account
 	4322 : {
-		AWS : AWS,
+		AWS : AWS2,
 		bucket : "com.entmike.miketest2"
 	},
+	// Example running in https.  Certs required to work.
 	4421 : {
 		AWS : AWS,
 		bucket : "com.entmike.miketest2",
