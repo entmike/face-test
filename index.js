@@ -3,6 +3,13 @@ const fs = require("fs"),
 	https = require("https");
 	
 module.exports = {
+	upload : options=>{
+		return new Promise((resolve,reject)=>{
+			require("./Upload").upload(options)
+				.then(data=>{resolve(data)})
+				.catch(err=>{reject(err)});
+		});
+	},
 	listen : options=>{
 		var servers = options.servers;
 		for(port in servers){
