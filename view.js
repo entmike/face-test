@@ -3,6 +3,7 @@ const http = require("http");
 const zlib = require("zlib");
 const sharp = require('sharp');
 const BufferStream = require("stream");
+const contentList = require("./contentList");
 
 const port = 4321;
 var requestCache = {};
@@ -22,7 +23,6 @@ var zipContent = function(request, response, cache){
 	
 }
 var serveContent = function(request, response, cache){
-	console.log(cache);
 	var acceptEncoding = request.headers['accept-encoding'] || "";
 	if (!cache.data.s3Object) {
 		response.end("File '" + request.url + "' not found.");
@@ -37,19 +37,39 @@ var serveContent = function(request, response, cache){
 		if(!cache.data.gzip){
 			var image = cache.data.processed;
 			zlib.gzip(image, function(err,data){
-				console.log("Adding gzip data to cache.");
+				console.log("Adding gzip data to cache for URL '" + request.url + "'.");
 				cache.data.gzip = data;
 				response.end(data);
 			});	
 		}else{
+			console.log("Using gzip cache for URL '" + request.url + "'.");
 			response.end(cache.data.gzip);
-		}			
+		}
 	} else {
 		response.writeHead(200, {});
 		response.end(data.Body);
 	}
 }
 const server = http.createServer((request,response)=>{
+	if(request.url == "/"){
+		contentList.createList(bucketName).then(list=>{
+			var html = "<html><body>" + list + "</body></html>";
+			response.end(html);
+		});
+		return;
+	}
+	if(request.url == "/files"){
+		contentList.createList2(bucketName).then(files=>{
+			response.end(JSON.stringify(files));
+		});
+		return;
+	}
+	if(request.url == "/process"){
+		contentList.processFiles(bucketName).then(files=>{
+			response.end(JSON.stringify(files, null, 2));
+		});
+		return;
+	}
 	var bucketKey = request.url.replace(/^\/+/g, '');
 	requestCache[bucketKey] = requestCache[bucketKey] || {};
 	var cache = requestCache[bucketKey];
@@ -63,7 +83,7 @@ const server = http.createServer((request,response)=>{
 				}),
 			docClient.query({
 				TableName: "imageInfo",
-				ProjectionExpression:"faceDetails",
+				ProjectionExpression:"faceIndex",
 				KeyConditionExpression: "#bucket = :bucket and image = :image",
 				ExpressionAttributeNames:{
 					"#bucket": "bucket"
@@ -74,7 +94,7 @@ const server = http.createServer((request,response)=>{
 				}
 			}).promise()
 		]).then((promiseData)=>{
-			if(promiseData[0].Body && promiseData[1].Items){
+			if(promiseData[0].Body && promiseData[1].Items && promiseData[1].Items[0].faceIndex){
 				cache.data = {
 					s3Object : promiseData[0],
 					dynamoObject : promiseData[1].Items[0]
@@ -83,9 +103,8 @@ const server = http.createServer((request,response)=>{
 				var originalImage = sharp(file);
 				var faces = [];
 				originalImage.metadata().then((metadata)=>{
-					for(face of cache.data.dynamoObject.faceDetails){
-						var box = face.BoundingBox;
-						console.log(metadata);
+					for(face of cache.data.dynamoObject.faceIndex.FaceRecords){
+						var box = face.Face.BoundingBox;
 						var coords = {
 							left : parseInt(box.Left * metadata.width),
 							top : parseInt(box.Top * metadata.height),
@@ -93,6 +112,14 @@ const server = http.createServer((request,response)=>{
 							height : parseInt(box.Height * metadata.height),
 						};
 						// Bounding box width/height can go beyond image dimensions in cases where face is on edge.
+						if(coords.left<0){
+							coords.width = coords.width - coords.left;
+							coords.left = 0;
+						}
+						if(coords.top<0){
+							coords.height = coords.height - coords.top;
+							coords.top = 0;
+						}
 						if(coords.left + coords.width > metadata.width) coords.width = metadata.width - coords.left;
 						if(coords.top + coords.height > metadata.height) coords.height = metadata.height - coords.top;
 						faces.push({coords : coords });
@@ -100,13 +127,12 @@ const server = http.createServer((request,response)=>{
 					return(faces)
 				}).then(data=>{
 					for(face of data){
-						console.log("Extracting " + JSON.stringify(face.coords));
 						face.img = originalImage.clone().extract(face.coords);
 					}
 				}).then(()=>{
 					originalImage
 						.grayscale()
-						.blur(20);
+						.blur(5);
 					var promises = [];
 					for(var face of faces){
 						promises.push(face.img.toBuffer());
