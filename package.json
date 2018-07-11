@@ -1,8 +1,8 @@
 {
-  "name": "face-test",
+  "name": "entmike-facetest",
   "version": "1.0.0",
   "description": "Face Test stuff",
-  "main": "test.js",
+  "main": "view.js",
   "dependencies": {
     "aws-sdk": "^2.271.1",
     "sharp": "^0.20.5"
@@ -15,7 +15,7 @@
     "type": "git",
     "url": "git+https://github.com/entmike/face-test.git"
   },
-  "author": "Mike Howles",
+  "author": "Mike Howles <mike.howles@gmail.com>",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/entmike/face-test/issues"
