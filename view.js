@@ -1,11 +1,19 @@
 const AWS = require("aws-sdk");
+const fs = require("fs");
 const http = require("http");
+const https = require("https");
 const zlib = require("zlib");
 const sharp = require('sharp');
 const BufferStream = require("stream");
 const contentList = require("./contentList");
 
 const port = 4321;
+const port_ssl = 4421;
+const certs = {
+	key : "certs/private.pem",
+	ca :"certs/ca.pem",
+	cert : "certs/cert.pem"
+};
 var requestCache = {};
 var bucketName = "com.entmike.miketest2";
 AWS.config.update({
@@ -50,7 +58,7 @@ var serveContent = function(request, response, cache){
 		response.end(data.Body);
 	}
 }
-const server = http.createServer((request,response)=>{
+const serverHandler = (request,response)=>{
 	if(request.url == "/"){
 		contentList.createList(bucketName).then(list=>{
 			var html = "<html><body>" + list + "</body></html>";
@@ -172,11 +180,34 @@ const server = http.createServer((request,response)=>{
 	}else{
 		serveContent(request, response, cache);
 	}
-	
-})
-server.listen(4321, (err)=>{
-	if(err){
-		return console.log("Error occured.\n\n", err);
-	}
-	console.log(`Server is listening on ${port}`);
-});
+};
+if(port_ssl !== undefined && port > 0 && port <=65535) {
+	const server = http.createServer(serverHandler)
+	server.listen(port,err=>{
+		if(err){
+			return console.log("Error occured.\n\n", err);
+		}
+		console.log(`Server is listening on ${port} for http requests.`);
+	});
+}
+if(port_ssl !== undefined && port_ssl > 0 && port_ssl <=65535) {
+	Promise.all([
+		new Promise((resolve,reject)=>{ fs.readFile(certs.key, "utf8", (err,data)=>{ err?reject(err):resolve(data);})}),
+		new Promise((resolve,reject)=>{ fs.readFile(certs.ca, "utf8", (err,data)=>{ err?reject(err):resolve(data);})}),
+		new Promise((resolve,reject)=>{ fs.readFile(certs.cert, "utf8", (err,data)=>{ err?reject(err):resolve(data);})}),
+	]).then(data=>{
+		const ssl_server = https.createServer({
+			key : data[0],
+			ca : data[1],
+			cert : data[2]
+		},serverHandler);
+		ssl_server.listen(port_ssl,err=>{
+			if(err){
+				return console.log("Error occured.\n\n", err);
+			}
+			console.log(`SSL Server is listening on ${port_ssl} for https requests.`);			
+		})
+	}).catch(err=>{
+		console.warn(`Could not start SSL.  Check your ports and certificates.\n\n${err}`);
+	});
+}
