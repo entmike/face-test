@@ -1,8 +1,8 @@
 {
   "name": "entmike-facetest",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Face Test stuff",
-  "main": "view.js",
+  "main": "index.js",
   "dependencies": {
     "aws-sdk": "^2.271.1",
     "sharp": "^0.20.5"
