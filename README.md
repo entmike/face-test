@@ -1,7 +1,7 @@
 # face-test [![npm version](https://badge.fury.io/js/entmike-facetest.svg)](https://badge.fury.io/js/entmike-facetest)
 
 # Usage
-```
+```javascript
 const FaceServer = require("entmike-facetest");
 const AWS = require("aws-sdk");
 
