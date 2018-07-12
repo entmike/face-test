@@ -3,24 +3,33 @@ module.exports = {
 		return new Promise((resolve,reject)=>{
 			const fs = require("fs");
 			if(options){
-				var fields = "bucket,file,bucketKey,AWS".split(",");
+				var fields = "bucket,file,bucketKey,AWS,table,rekogCollection".split(",");
 				const s3 = new options.AWS.S3({
 					apiVersion: '2006-03-01'
 				});
 				for(field of fields) if(options[field] === undefined) reject(`Field ${field} required for upload options.`);
 				new Promise((resolve,reject)=>{
-					fs.readFile(options.file, "base64", (err,data)=>{
+					fs.readFile(options.file, (err,data)=>{
 						err ? reject(err) : resolve(data)
 					})
 				})
 				.then(fileContents=>{
-					s3.headObject({
-						Bucket: options.bucket,	
-						Key: options.bucketKey
-					}).promise()
+					new Promise((resolve,reject)=>{
+						// Rejecrt is actually a good thing in this scenario...
+						if(options.overwrite) reject("Overwrite Set.");
+						s3.headObject({
+							Bucket: options.bucket,	
+							Key: options.bucketKey
+						}).promise().catch(err=>{
+							reject(err);
+						}).then(data=>{
+							resolve(data);
+						});
+					})
 					.then((data)=>{
 						// File already exists.
-						console.log(bucketKey + " already exists.");
+						console.log(options.bucketKey + " already exists.");
+						reject(options.bucketKey + " already exists.  Use overwrite flag to replace.");
 						// doRecognition(faceCollection,bucketName,bucketKey);
 					},(err)=>{
 						// console.log(bucketKey + " does not exist.");
@@ -31,8 +40,21 @@ module.exports = {
 							Body: fileContents
 						}).promise().then(
 							(data)=>{
-								console.log("File uploaded.")
-								resolve("File uploaded.");
+								if(!options.skipRekognition){
+									require("./Rekog").process({
+										AWS : options.AWS,
+										bucket : options.bucket,
+										bucketKey : options.bucketKey,
+										rekogCollection : options.rekogCollection,
+										table : options.table
+									}).then(data=>{
+										resolve(data);
+									}).catch(err=>{
+										reject(err);
+									});
+								}else{
+									resolve("Upload complete");
+								}
 							},
 							(err)=>{
 								console.log("Error uploading to S3.");
@@ -40,7 +62,6 @@ module.exports = {
 							}
 						);
 					});
-					resolve(data);
 				})
 				.catch(err=>{
 					reject(`File upload failed.\n\n${err}`);

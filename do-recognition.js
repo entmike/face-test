@@ -11,6 +11,7 @@ module.exports = {
 		const dynamodb = new AWS.DynamoDB({
 			apiVersion: '2012-08-10'
 		});
+		const docClient = new options.AWS.DynamoDB.DocumentClient();
 		var imageId = bucketName + "-" + bucketKey.replace(/\//g,"-");
 		dynamodb.getItem({
 			TableName : 'imageInfo',
@@ -51,24 +52,19 @@ module.exports = {
 					"ALL"
 				]
 			}).promise()]).then((data)=>{
-				var docClient = new AWS.DynamoDB.DocumentClient();
 				// console.log(data);
 				docClient.put({
 					TableName: 'imageInfo',
 					Item: {
-						'bucket' : bucketName,
-						'image' : bucketKey,
+						'bucket' : options.bucket,
+						'image' : options.bucketKey,
 						'labels' : data[0].Labels,
 						'faceDetails' : data[1].FaceDetails,
 						'faceIndex' : data[2]
 					}
-				}, function(err, data) {
-					if (err) {
-						console.log("Error", err);
-					} else {
-						// console.log(bucketKey);
-					}
-				});
+				}).promise()
+				.then(data=>{resolve("Done!")})
+				.catch(err=>{reject(err);});
 			});
 		});
 	}

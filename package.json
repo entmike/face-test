@@ -1,11 +1,15 @@
 {
   "name": "entmike-facetest",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Face Test stuff",
   "main": "index.js",
   "dependencies": {
     "aws-sdk": "^2.271.1",
+    "minimist": "^1.2.0",
     "sharp": "^0.20.5"
+  },
+  "config": {
+    "unsafe-perm": true
   },
   "devDependencies": {},
   "scripts": {
