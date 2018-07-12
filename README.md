@@ -1,5 +1,10 @@
 # face-test [![npm version](https://badge.fury.io/js/entmike-facetest.svg)](https://badge.fury.io/js/entmike-facetest)
 
+# Install
+
+* MacOS: `sudo npm install entmike-facetest --unsafe-perm=true`
+* Windows : `npm install entmike-facetest`
+
 # Usage
 ```javascript
 const FaceServer = require("entmike-facetest"),
