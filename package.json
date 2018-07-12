@@ -1,7 +1,7 @@
 {
   "name": "entmike-facetest",
-  "version": "1.0.4",
-  "description": "Face Test stuff",
+  "version": "1.0.5",
+  "description": "A weird AWS experiment with Rekognition",
   "main": "index.js",
   "dependencies": {
     "aws-sdk": "^2.271.1",
@@ -12,10 +12,10 @@
   "config": {
     "unsafe-perm": true
   },
+  "keywords" : [
+    "aws","rekognition","node","aws-sdk"
+  ],
   "devDependencies": {},
-  "scripts": {
-    "test": "node test ."
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/entmike/face-test.git"
