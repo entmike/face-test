@@ -10,6 +10,13 @@ module.exports = {
 				.catch(err=>{reject(err)});
 		});
 	},
+	uploadFolder : options=>{
+		return new Promise((resolve,reject)=>{
+			require("./Upload").uploadFolder(options)
+				.then(data=>{resolve(data)})
+				.catch(err=>{reject(err)});
+		});
+	},
 	listen : options=>{
 		var servers = options.servers;
 		for(port in servers){
@@ -44,7 +51,7 @@ module.exports = {
 							if(err){
 								return console.log(`Error occurred.\n\n ${err}`);
 							}
-							console.log(`Server is listening on ${port} for bucket ${server.bucket} for http requests.`);
+							console.log(`Servers is listening on ${port} for bucket ${server.bucket} for http requests.`);
 						});
 					}
 				})(port);

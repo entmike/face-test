@@ -1,23 +1,22 @@
 var argv = require('minimist')(process.argv.slice(2));
 var pass = true;
-for(argument of "bucket,file,rekogCollection,table".split(",")){
+for(argument of "bucket,folder,rekogCollection,table".split(",")){
 	if(argv[argument] === undefined) pass = false;
 }
 if(!pass){
 	console.log(["USAGE:",
-		"--file [local file]",
+		"--folder [local folder]",
 		"--bucket [s3 bucket name]",
 		"--rekogCollection [rekognition collection name]",
 		"--table [dynamodb table]",
 		"",
 		"OPTIONAL",
-		"--bucketKey [s3 bucket key, if not specified, file name is used]",
 		"--region [aws region, default = us-west-2]",
 		"--skipRekognition to skip rekognition",
 		"--profilename [aws account name, default = default profile as specified in ~/.aws/credentials]",
 		"-o to overwrite",
 		"",
-		"Example: node upload.js --bucket com.entmike.miketest2 --bucketKey abc.jpg --file images/DSC_0900.jpg --rekogCollection mike --table imageInfo"
+		"Example: node uploadFolder.js --bucket com.entmike.miketest2 --folder images --rekogCollection mike --table imageInfo"
 	].join("\n"));
 }else{
 	const FaceServer = require("entmike-facetest");
@@ -28,11 +27,10 @@ if(!pass){
 	if(argv.profilename) AWS.config.update({
 		credentials : new AWS.SharedIniFileCredentials({profile: argv.profilename})
 	});
-	FaceServer.upload({
+	FaceServer.uploadFolder({
 		AWS : AWS,
 		bucket : argv.bucket,
-		file : argv.file,
-		bucketKey : argv.bucketKey,
+		folder : argv.folder,
 		rekogCollection : argv.rekogCollection,
 		skipRekognition : argv.skipRekognition?true:false,
 		table : argv.table,

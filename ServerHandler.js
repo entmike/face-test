@@ -1,3 +1,4 @@
+const querystring = require("querystring");
 module.exports = {
 	handler : (options)=>{
 		const bucketName = options.bucketName;
@@ -16,7 +17,6 @@ module.exports = {
 			type = options.type || "showface";
 			
 			var acceptEncoding = request.headers['accept-encoding'] || "";
-			console.log(cache);
 			if (!cache.data.s3Object) {
 				response.end("File '" + request.url + "' not found.");
 				return;
@@ -82,6 +82,26 @@ module.exports = {
 						response : response,
 						object : image,
 						type : "showfaces"
+					});
+				}).catch(err=>{
+					response.end(err.message);
+				});
+			}
+			else if(request.url.indexOf("/showface/") == 0) {
+				var path = request.url.replace(/^\/showface\/+/g, '').split("?");
+				if(path.length<2) response.end("Invalid Path");
+				var args = querystring.parse(path[1]);
+				var bucketKey = path[0];
+				PhotoUtils.showFace({
+					bucket : bucketName,
+					bucketKey : bucketKey,
+					face : args.face
+				}).then(image=>{
+					serveContent({
+						request : request,
+						response : response,
+						object : image,
+						type : "face"
 					});
 				}).catch(err=>{
 					response.end(err.message);

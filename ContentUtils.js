@@ -95,7 +95,7 @@ module.exports = {
 									var faceRecords = item.db.Items[0].faceIndex.FaceRecords;
 									html+="<ul>"
 									for(record of faceRecords){
-										html+="<li>" + "<a href='/showfaces/" + item.s3.Key + "?faceid=" + record.Face.FaceId + "'>" + record.Face.FaceId + "</a>"
+										html+="<li>" + "<a href='/showface/" + item.s3.Key + "?face=" + record.Face.FaceId + "'>" + record.Face.FaceId + "</a>"
 									}
 									html+="</ul>"
 								}

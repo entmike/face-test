@@ -1,3 +1,4 @@
+const uuidv1 = require('uuid/v1');
 module.exports = {
 	process : options=>{
 		return new Promise((resolve,reject)=>{
@@ -5,6 +6,8 @@ module.exports = {
 				apiVersion: '2016-06-27'
 			});
 			var imageId = options.bucket + "-" + options.bucketKey.replace(/\//g,"-");
+			var uuid = uuidv1();
+
 			Promise.all([
 				rekognition.detectLabels({
 					Image: {
@@ -30,25 +33,28 @@ module.exports = {
 						"Name": options.bucketKey
 						}
 					},
-					"ExternalImageId": imageId,
+					"ExternalImageId": uuid,
 					"DetectionAttributes": [
 						"ALL"
 					]
 				}).promise()
-			]).then(data=>{
+			]).then(rekogData=>{
 				var docClient = new options.AWS.DynamoDB.DocumentClient();
 				docClient.put({
 					TableName: options.table,
 					Item: {
 						'bucket' : options.bucket,
 						'image' : options.bucketKey,
-						'labels' : data[0].Labels,
-						'faceDetails' : data[1].FaceDetails,
-						'faceIndex' : data[2]
+						'ExternalImageId' : uuid,
+						'labels' : rekogData[0].Labels,
+						'faceDetails' : rekogData[1].FaceDetails,
+						'faceIndex' : rekogData[2]
 					}
 				}).promise()
-				.then(data=>{resolve("Done!")})
-				.catch(err=>{reject(err);});
+				.then(data=>{
+					resolve(`Rekognition data successfully stored to ${options.table}.   ${rekogData[2].FaceRecords.length} faces detected.`)
+				})
+				.catch(err=>{reject(`Error writing to DynamoDB table ${options.table}\n\n${err}`);});
 			}).catch(err=>{
 				reject(err);
 			});

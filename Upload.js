@@ -1,13 +1,44 @@
+const fs = require("fs");
 module.exports = {
+	uploadFolder : options=>{
+		return new Promise((resolve,reject)=>{
+			for(field of "bucket,folder,AWS,table,rekogCollection".split(",")) if(options[field] === undefined) reject(`Field ${field} required for upload options.`);
+			new Promise((resolve, reject)=>{
+				fs.readdir(options.folder, (err, files) => {
+					err ? reject(err) : resolve(files);
+				});
+			}).then(fileNames=>{
+				var uploadPromises = [];
+				for(file of fileNames){
+					var file = options.folder.replace(/\/$/, "") + "/" + file;
+					uploadPromises.push(module.exports.upload({
+						AWS : options.AWS,
+						bucket : options.bucket,
+						file : file,
+						table : options.table,
+						rekogCollection : options.rekogCollection,
+						skipRekognition : options.skipRekognition?options.skipRekognition:false,
+						overwrite : options.overwrite?options.overwrite:false
+					}).catch(err=>{
+						return err;	// Maybe file already exists.  Keep going, though.
+					}));
+				}
+				Promise.all(uploadPromises).then(data=>{
+					resolve(data);
+				}).catch(err=>{
+					reject(err);
+				})
+			});
+		});
+	},
 	upload : options=>{
 		return new Promise((resolve,reject)=>{
-			const fs = require("fs");
 			if(options){
-				var fields = "bucket,file,bucketKey,AWS,table,rekogCollection".split(",");
+				for(field of "bucket,file,AWS,table,rekogCollection".split(",")) if(options[field] === undefined) reject(`Field ${field} required for upload options.`);
 				const s3 = new options.AWS.S3({
 					apiVersion: '2006-03-01'
 				});
-				for(field of fields) if(options[field] === undefined) reject(`Field ${field} required for upload options.`);
+				if(!options.bucketKey) options.bucketKey = options.file;
 				new Promise((resolve,reject)=>{
 					fs.readFile(options.file, (err,data)=>{
 						err ? reject(err) : resolve(data)
@@ -15,7 +46,7 @@ module.exports = {
 				})
 				.then(fileContents=>{
 					new Promise((resolve,reject)=>{
-						// Rejecrt is actually a good thing in this scenario...
+						// Reject is actually a good thing in this scenario...
 						if(options.overwrite) reject("Overwrite Set.");
 						s3.headObject({
 							Bucket: options.bucket,	
@@ -28,7 +59,6 @@ module.exports = {
 					})
 					.then((data)=>{
 						// File already exists.
-						console.log(options.bucketKey + " already exists.");
 						reject(options.bucketKey + " already exists.  Use overwrite flag to replace.");
 						// doRecognition(faceCollection,bucketName,bucketKey);
 					},(err)=>{
@@ -48,7 +78,7 @@ module.exports = {
 										rekogCollection : options.rekogCollection,
 										table : options.table
 									}).then(data=>{
-										resolve(data);
+										resolve(options.file + " upload complete.\n" + data);
 									}).catch(err=>{
 										reject(err);
 									});
@@ -57,7 +87,6 @@ module.exports = {
 								}
 							},
 							(err)=>{
-								console.log("Error uploading to S3.");
 								reject(`Error uploading to S3.${err}`);
 							}
 						);
@@ -66,7 +95,6 @@ module.exports = {
 				.catch(err=>{
 					reject(`File upload failed.\n\n${err}`);
 				});
-
 			}else{
 				reject("No options specified");
 			}
