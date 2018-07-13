@@ -5,6 +5,10 @@ AWS2 = require("aws-sdk");
 AWS.config.update({
 	region: "us-west-2"
 });
+// Needed for Docker Containers
+process.on('SIGINT', function() {
+    process.exit();
+});
 
 AWS2.config.update({
 	region: "us-west-2",
