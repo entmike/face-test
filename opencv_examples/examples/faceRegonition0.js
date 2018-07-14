@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
-const cv = require('/usr/lib/node_modules/opencv4nodejs');
+const cv = require('opencv4nodejs');
 
 if (!cv.xmodules.face) {
   throw new Error('exiting: opencv4nodejs compiled without face module');
 }
 
-const basePath = '../data/face-recognition';
+const basePath = '/opencv_examples/data/face-recognition';
 const imgsPath = path.resolve(basePath, 'imgs');
 const nameMappings = ['daryl', 'rick', 'negan'];
 
