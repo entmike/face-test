@@ -7,6 +7,11 @@ git clone https://github.com/entmike/face-test.git
 cd face-test
 ./buildDockerImage.sh
 ```
+
+## Simple Docker Test
+`sudo docker run --rm -ti faceserver node /opencv_examples/examples/faceRegonition0`
+
+## Example of running face-test NPM module
 For data persistence, scripting, and certs, /app folder should be mapped to logical host folder.
 
 Example execution where:
