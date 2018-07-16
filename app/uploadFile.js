@@ -14,6 +14,7 @@ if(!pass){
 		"--bucketKey [s3 bucket key, if not specified, file name is used]",
 		"--region [aws region, default = us-west-2]",
 		"--skipRekognition to skip rekognition",
+                "--useOpenCV to use OpenCV face recognition", 
 		"--profilename [aws account name, default = default profile as specified in ~/.aws/credentials]",
 		"-o to overwrite",
 		"",
